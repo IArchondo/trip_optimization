@@ -1,1 +1,4 @@
 *.pyc
+test.py
+settings.json
+g0_utils/config.yml
