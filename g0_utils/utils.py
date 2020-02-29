@@ -21,7 +21,7 @@ def load_standard_date():
         month=standard_date_config["month"],
         day=standard_date_config["day"],
         hour=standard_date_config["hour"],
-        mnute=standard_date_config["minute"],
+        minute=standard_date_config["minute"],
     )
 
     return standard_date
