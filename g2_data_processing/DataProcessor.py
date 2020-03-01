@@ -7,6 +7,8 @@ LOGGER = logging.getLogger("DataProcessor")
 class DataProcessor:
     def __init__(self, distances_dict):
 
+        self.LARGE_NUMBER = 1000000
+
         self.distances_dict = distances_dict
 
         self.combination_distance = distances_dict["combination_distance_dict"]
@@ -16,6 +18,22 @@ class DataProcessor:
         self.places = distances_dict["places"]
 
         LOGGER.info("DataProcessor initiated")
+
+    def add_own_combination(self, combination_distance, places):
+        """Add combinations with a place with its own to get an equilibrated matrix
+        
+        Args:
+            combination_distance (dict): combination-travel time dict
+            places (list): list with all the places
+        
+        Returns:
+            dict: dict with added combinations
+        """
+
+        for place in places:
+            combination_distance[(place, place)] = self.LARGE_NUMBER
+
+        return combination_distance
 
     def add_schedule_dimension(self, combination_distance, places):
         """Add schedule dimension to distance matrix
@@ -44,6 +62,10 @@ class DataProcessor:
         Returns:
             dict: modified input dict
         """
+
+        self.combination_distance_stay = self.add_schedule_dimension(
+            self.combination_distance_stay, self.places
+        )
 
         self.comb_dist_sch = self.add_schedule_dimension(
             self.combination_distance_stay, self.places
