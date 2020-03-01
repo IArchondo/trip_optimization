@@ -2,6 +2,7 @@ import googlemaps
 import pandas as pd
 import logging
 import yaml
+import pickle
 from pathlib import Path
 from itertools import combinations
 from g0_utils.utils import load_standard_date
@@ -51,6 +52,7 @@ class DistanceMatrixCalculator:
         Returns:
             float: travel time in minutes
         """
+        LOGGER.debug(f"Fetching travel time from {place_tuple[0]} to {place_tuple[1]}")
 
         directions_result = self.gmaps.directions(
             place_tuple[0],
@@ -65,10 +67,44 @@ class DistanceMatrixCalculator:
 
         return travel_time
 
-    def execute_pipeline(self):
+    def execute_pipeline(self, save_output=False):
+        """Execute complete pipeline
+        
+        Returns:
+            dict: Dictionary with:
+                - dict with combination and their travel time
+                - dict with combination and travel time + stay time
+        """
+
+        LOGGER.info("Executing pipeline")
+
         self.combination_list = self.get_combination_list(self.places)
 
-        self.distance_result_dict = {
+        LOGGER.info("Gathering travel times")
+        self.combination_distance_dict = {
             combination: self.get_travel_time(combination)
             for combination in self.combination_list
         }
+
+        self.combination_distance_stay_dict = {
+            combination: (
+                self.combination_distance_dict[combination]
+                + self.duration_dict[combination[0]][0]
+            )
+            for combination in self.combination_list
+        }
+
+        output_dict = {
+            "combination_distance_dict": self.combination_distance_dict,
+            "combination_distance_stay_dict": self.combination_distance_stay_dict,
+        }
+
+        if save_output:
+            LOGGER.info("Saving output under latest_distances.pickle")
+            with open(
+                Path("00_saved_data/saved_distances") / "latest_distances.pickle", "wb"
+            ) as handle:
+                pickle.dump(output_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        return output_dict
+
