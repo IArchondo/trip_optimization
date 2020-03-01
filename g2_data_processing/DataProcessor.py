@@ -29,8 +29,9 @@ class DataProcessor:
         Returns:
             dict: dict with added combinations
         """
+        LOGGER.info("Balancing matrix")
 
-        for place in places:
+        for place in list(places):
             combination_distance[(place, place)] = self.LARGE_NUMBER
 
         return combination_distance
@@ -45,6 +46,7 @@ class DataProcessor:
         Returns:
             dict: dict with added dimension
         """
+        LOGGER.info("Adding schedule dimension")
 
         schedule_length = len(places)
         comb_dist_sch = {}
@@ -63,7 +65,7 @@ class DataProcessor:
             dict: modified input dict
         """
 
-        self.combination_distance_stay = self.add_schedule_dimension(
+        self.combination_distance_stay = self.add_own_combination(
             self.combination_distance_stay, self.places
         )
 
