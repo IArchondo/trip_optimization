@@ -3,4 +3,7 @@ standard_time:
     month: 4
     day: 10
     hour: 16
-    minute: 0        
+    minute: 0
+    
+execution_pipeline:
+    fetch_distances: False

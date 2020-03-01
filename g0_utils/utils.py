@@ -11,7 +11,7 @@ def load_standard_date():
         datetime.datetime: standard datetime
     """
 
-    with open(Path("g0_utils/config.yml")) as file:
+    with open(Path("config.yml")) as file:
         CONFIG = yaml.full_load(file)
 
     standard_date_config = CONFIG["standard_time"]
