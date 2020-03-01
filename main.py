@@ -7,6 +7,7 @@ import logging
 import yaml
 from pathlib import Path
 from g1_distance_calculation.DistanceMatrixCalculator import DistanceMatrixCalculator
+from g2_data_processing.DataProcessor import DataProcessor
 
 logging.basicConfig(level=logging.INFO)
 
@@ -20,6 +21,7 @@ EXECUTION_PIPELINE = CONFIG["execution_pipeline"]
 
 
 if __name__ == "__main__":
+
     if EXECUTION_PIPELINE["fetch_distances"]:
 
         input_data = pd.read_excel("data_input.xlsx")
@@ -35,4 +37,8 @@ if __name__ == "__main__":
         ) as handle:
             DISTANCES = pickle.load(handle)
 
-    print(DISTANCES)
+    data_processor = DataProcessor(DISTANCES)
+
+    PROC_DISTANCES = data_processor.execute_pipeline()
+
+    print(PROC_DISTANCES)

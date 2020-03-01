@@ -11,7 +11,9 @@ LOGGER = logging.getLogger("DistanceMatrixCalculator")
 
 
 class DistanceMatrixCalculator:
-    def __init__(self, input_table):
+    def __init__(self, input_data):
+
+        input_data = self.__check_input_data(input_data)
 
         self.standard_date = load_standard_date()
 
@@ -22,11 +24,25 @@ class DistanceMatrixCalculator:
         LOGGER.debug("Google Maps Client initiated")
         # TODO input checker
 
-        self.places = input_table["Place"]
-        self.durations = input_table["Duration"]
+        self.places = input_data["Place"]
+        self.durations = input_data["Duration"]
         self.duration_dict = {x: [self.durations[i]] for i, x in enumerate(self.places)}
 
         LOGGER.info("DistanceMatrixCalculator initiated")
+
+    def __check_input_data(self, input_data):
+        """Check if input data fulfills required criteria
+        
+        Args:
+            input_data (pd.DataFrame): input data with places and durations
+        
+        Returns:
+            pd.DataFrame: input data with places and durations
+        """
+        assert (
+            pd.Series(["Place", "Duration"]).isin(input_data.columns).all()
+        ), "Place or Duration are not present in input data"
+        return input_data
 
     def get_combination_list(self, places_list):
         """Generate a list of all combination tuples in a given places list
@@ -97,6 +113,8 @@ class DistanceMatrixCalculator:
         output_dict = {
             "combination_distance_dict": self.combination_distance_dict,
             "combination_distance_stay_dict": self.combination_distance_stay_dict,
+            "places": self.places,
+            "duration_dict": self.duration_dict,
         }
 
         if save_output:
