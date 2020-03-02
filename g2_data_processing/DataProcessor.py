@@ -19,6 +19,22 @@ class DataProcessor:
 
         LOGGER.info("DataProcessor initiated")
 
+    def add_inverse_relationships(self, combination_distance):
+        """Add inverse relationships to complete matrix
+        
+        Args:
+            combination_distance (dict): combination-travel time dict
+
+        Returns:
+           dict: dict with added combinations
+        """
+        combinations = list(combination_distance.keys())
+
+        for comb in combinations:
+            combination_distance[(comb[1], comb[0])] = combination_distance[comb]
+
+        return combination_distance
+
     def add_own_combination(self, combination_distance, places):
         """Add combinations with a place with its own to get an equilibrated matrix
         
@@ -64,6 +80,10 @@ class DataProcessor:
         Returns:
             dict: modified input dict
         """
+
+        self.combination_distance_stay = self.add_inverse_relationships(
+            self.combination_distance_stay
+        )
 
         self.combination_distance_stay = self.add_own_combination(
             self.combination_distance_stay, self.places
