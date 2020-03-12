@@ -59,6 +59,20 @@ class DistanceMatrixCalculator:
 
         return combination_list
 
+    def get_geocoding(self, place):
+        """Get geocoding of a given input
+        
+        Args:
+            place (str): Place as string
+        
+        Returns:
+            xxx: geocoding result
+        """
+        LOGGER.debug(f"Gathering geociding for {place}")
+        geocoding_result = self.gmaps.geocode(place)
+
+        return geocoding_result
+
     def get_travel_time(self, place_tuple):
         """Calculate travel time in minutes for a give place pair in tuple format
         
@@ -94,6 +108,10 @@ class DistanceMatrixCalculator:
 
         LOGGER.info("Executing pipeline")
 
+        # self.places_geocoding = {
+        #     place: self.get_geocoding(place) for place in self.places
+        # }
+
         self.combination_list = self.get_combination_list(self.places)
 
         LOGGER.info("Gathering travel times")
@@ -115,6 +133,7 @@ class DistanceMatrixCalculator:
             "combination_distance_stay_dict": self.combination_distance_stay_dict,
             "places": self.places,
             "duration_dict": self.duration_dict,
+            # "placed_geocoding_dict": self.places_geocoding,
         }
 
         if save_output:

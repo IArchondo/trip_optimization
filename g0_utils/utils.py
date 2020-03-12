@@ -26,3 +26,23 @@ def load_standard_date():
 
     return standard_date
 
+
+def load_problem_definition():
+    """Loads problem definition from config file
+    
+    Returns:
+        dict: dict with problem definition
+    """
+    # TODO this should be expanded to include all definitions
+    with open(Path("config.yml")) as file:
+        CONFIG = yaml.full_load(file)
+
+    problem_definition_config = CONFIG["problem_definition"]
+
+    num_days = problem_definition_config["num_days"]
+    hotel_index = problem_definition_config["hotel_index"]
+
+    problem_definition = {"num_days": num_days, "hotel_index": hotel_index}
+
+    return problem_definition
+
