@@ -50,9 +50,13 @@ class ScheduleOptimizer:
             data_model["num_days"],
             data_model["hotel"],
         )
+
+        # Create Routing Model.
         routing = pywrapcp.RoutingModel(manager)
 
-        def distance_callback(self, from_index, to_index, manager, data_model):
+        # Create and register a transit callback.
+        def distance_callback(from_index, to_index):
+            """Returns the distance between the two nodes."""
             # Convert from routing variable Index to distance matrix NodeIndex.
             from_node = manager.IndexToNode(from_index)
             to_node = manager.IndexToNode(to_index)
@@ -95,4 +99,32 @@ class ScheduleOptimizer:
         )
 
         return solution
+
+    def extract_solution(self,data_model,problem_dict,solution):
+        """Extract solution
+        
+        Args:
+            data_model (dict): input data model
+            problem_dict (dict): problem dict
+            solution (solution): solution to problem
+        
+        Returns:
+            dict: dict with all routes per day
+        """        
+
+        solution_dict = {}
+
+        for day in range(data_model"num_days"]):
+            stops = []
+            index = problem_dict["routing"].Start(day)
+
+            while not problem_dict["routing"].IsEnd(index):
+
+                stops.append(proc_dist["places"][problem_dict["manager"].IndexToNode(index)])
+                index = solution.Value(problem_dict["routing"].NextVar(index))
+
+            solution_dict[day] = stops
+
+        return solution_dict
+
 
