@@ -1,17 +1,20 @@
 """
 Main run script.
 """
+import os
 import pandas as pd
 import pickle
 import logging
 import yaml
 from pathlib import Path
+from datetime import datetime
 from g0_utils.utils import load_problem_definition
 from g1_distance_calculation.DistanceMatrixCalculator import DistanceMatrixCalculator
 from g2_data_processing.DataProcessor import DataProcessor
 from g3_schedule_optimization.ScheduleOptimizer import ScheduleOptimizer
+from g4_schedule_visualization.ScheduleVisualizer import ScheduleVisualizer
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 LOGGER = logging.getLogger("MainExecution")
 
@@ -23,6 +26,8 @@ EXECUTION_PIPELINE = CONFIG["execution_pipeline"]
 
 
 if __name__ == "__main__":
+
+    CURRENT_RUN = str(datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
 
     if EXECUTION_PIPELINE["fetch_distances"]:
 
@@ -53,4 +58,9 @@ if __name__ == "__main__":
     SCHED_OPT = ScheduleOptimizer(PROC_DISTANCES, PROBLEM_DEFINITION)
 
     SOLUTION_DICT = SCHED_OPT.execute_optimizer_pipeline()
+
+    SCHED_VIS = ScheduleVisualizer(PROC_DISTANCES, SOLUTION_DICT)
+    os.makedirs(f"02_reports/{CURRENT_RUN}")
+
+    SCHED_VIS.execute_visualizer_pipeline(CURRENT_RUN)
 
