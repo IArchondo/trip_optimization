@@ -150,7 +150,5 @@ class ScheduleOptimizer:
 
         solution_dict = self.extract_solution(self.data_model, problem_dict, solution)
 
-        print(solution_dict)
-
         return solution_dict
 
