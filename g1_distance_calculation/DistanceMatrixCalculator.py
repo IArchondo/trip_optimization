@@ -3,6 +3,7 @@ import pandas as pd
 import logging
 import yaml
 import pickle
+import time
 from pathlib import Path
 from itertools import combinations
 from g0_utils.utils import load_standard_date
@@ -68,7 +69,8 @@ class DistanceMatrixCalculator:
         Returns:
             xxx: geocoding result
         """
-        LOGGER.debug(f"Gathering geociding for {place}")
+        LOGGER.debug(f"Gathering geocoding for {place}")
+        time.sleep(5)
         geocoding_result = self.gmaps.geocode(place)
 
         return geocoding_result
@@ -84,6 +86,7 @@ class DistanceMatrixCalculator:
         """
         LOGGER.debug(f"Fetching travel time from {place_tuple[0]} to {place_tuple[1]}")
 
+        time.sleep(5)
         directions_result = self.gmaps.directions(
             place_tuple[0],
             place_tuple[1],
@@ -108,9 +111,9 @@ class DistanceMatrixCalculator:
 
         LOGGER.info("Executing pipeline")
 
-        # self.places_geocoding = {
-        #     place: self.get_geocoding(place) for place in self.places
-        # }
+        self.places_geocoding = {
+            place: self.get_geocoding(place) for place in self.places
+        }
 
         self.combination_list = self.get_combination_list(self.places)
 
@@ -133,7 +136,7 @@ class DistanceMatrixCalculator:
             "combination_distance_stay_dict": self.combination_distance_stay_dict,
             "places": self.places,
             "duration_dict": self.duration_dict,
-            # "placed_geocoding_dict": self.places_geocoding,
+            "placed_geocoding_dict": self.places_geocoding,
         }
 
         if save_output:
