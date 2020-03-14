@@ -1,5 +1,8 @@
 import matplotlib.pyplot as plt
 import pandas as pd
+import logging
+
+LOGGER = logging.getLogger("ScheduleVisualizer")
 
 
 class ScheduleVisualizer:
@@ -142,6 +145,7 @@ class ScheduleVisualizer:
         Args:
             current_run (str): string detailing name of the folder to save output in
         """
+        LOGGER.info("Generating trip report")
 
         for day in list(self.solution_dict.keys()):
             self.generate_day_route_output(

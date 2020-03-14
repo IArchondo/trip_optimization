@@ -6,6 +6,7 @@ import pandas as pd
 import pickle
 import logging
 import yaml
+from shutil import copy as copy_file
 from pathlib import Path
 from datetime import datetime
 
@@ -66,4 +67,18 @@ if __name__ == "__main__":
     os.makedirs(f"02_reports/{CURRENT_RUN}")
 
     SCHED_VIS.execute_visualizer_pipeline(CURRENT_RUN)
+
+    copy_file(
+        "03_notebook_templates/trip_report_template.ipynb",
+        f"02_reports/{CURRENT_RUN}/trip_report_{CURRENT_RUN}.ipynb",
+    )
+
+    os.system(
+        (
+            "jupyter nbconvert --execute --no-input --no-prompt --to html "
+            + f"02_reports/{CURRENT_RUN}/trip_report_{CURRENT_RUN}.ipynb"
+        )
+    )
+
+    os.remove(f"02_reports/{CURRENT_RUN}/trip_report_{CURRENT_RUN}.ipynb")
 
