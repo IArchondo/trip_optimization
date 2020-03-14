@@ -6,8 +6,8 @@ standard_time:
     minute: 0
 
 problem_definition:
-    num_days: 2
-    hotel_index: 9
+    num_days: 4
+    hotel_index: 8
     
 execution_pipeline:
     fetch_distances: False
