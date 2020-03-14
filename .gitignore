@@ -4,4 +4,5 @@
 test.py
 settings.json
 g0_utils/keys.yml
+01_map_data/*
 02_reports/*
