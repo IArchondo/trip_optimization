@@ -93,14 +93,14 @@ class ScheduleOptimizer:
 
         return output_dict
 
-    def solve_problem(self, model_data, problem_dict):
+    def solve_problem(self, problem_dict):
         solution = problem_dict["routing"].SolveWithParameters(
             problem_dict["search_parameters"]
         )
 
         return solution
 
-    def extract_solution(self,data_model,problem_dict,solution):
+    def extract_solution(self, data_model, problem_dict, solution):
         """Extract solution
         
         Args:
@@ -110,21 +110,47 @@ class ScheduleOptimizer:
         
         Returns:
             dict: dict with all routes per day
-        """        
+        """
 
         solution_dict = {}
 
-        for day in range(data_model"num_days"]):
+        for day in range(data_model["num_days"]):
             stops = []
             index = problem_dict["routing"].Start(day)
+            hotel_index = index
 
             while not problem_dict["routing"].IsEnd(index):
 
-                stops.append(proc_dist["places"][problem_dict["manager"].IndexToNode(index)])
+                stops.append(
+                    self.proc_data_dict["places"][
+                        problem_dict["manager"].IndexToNode(index)
+                    ]
+                )
                 index = solution.Value(problem_dict["routing"].NextVar(index))
 
+            stops.append(
+                self.proc_data_dict["places"][
+                    problem_dict["manager"].IndexToNode(hotel_index)
+                ]
+            )
             solution_dict[day] = stops
 
         return solution_dict
 
+    def execute_optimizer_pipeline(self):
+        """Execute whole optimizer pipeline
+        
+        Returns:
+            dict: solution dictionary
+        """
+
+        problem_dict = self.define_model(self.data_model)
+
+        solution = self.solve_problem(problem_dict)
+
+        solution_dict = self.extract_solution(self.data_model, problem_dict, solution)
+
+        print(solution_dict)
+
+        return solution_dict
 
