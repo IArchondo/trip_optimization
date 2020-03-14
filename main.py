@@ -6,10 +6,12 @@ import pickle
 import logging
 import yaml
 from pathlib import Path
+from g0_utils.utils import load_problem_definition
 from g1_distance_calculation.DistanceMatrixCalculator import DistanceMatrixCalculator
 from g2_data_processing.DataProcessor import DataProcessor
+from g3_schedule_optimization.ScheduleOptimizer import ScheduleOptimizer
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 LOGGER = logging.getLogger("MainExecution")
 
@@ -30,10 +32,15 @@ if __name__ == "__main__":
 
         DISTANCES = dmc.execute_pipeline(True)
 
+        with open(
+            Path("00_saved_data/saved_distances") / "latest_distances_2.pickle", "wb"
+        ) as handle:
+            pickle.dump(DISTANCES, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
     else:
         LOGGER.info("Loading saved distances")
         with open(
-            Path("00_saved_data/saved_distances") / "latest_distances.pickle", "rb"
+            Path("00_saved_data/saved_distances") / "latest_distances_2.pickle", "rb"
         ) as handle:
             DISTANCES = pickle.load(handle)
 
@@ -41,4 +48,9 @@ if __name__ == "__main__":
 
     PROC_DISTANCES = data_processor.execute_pipeline()
 
-    print(PROC_DISTANCES)
+    PROBLEM_DEFINITION = load_problem_definition()
+
+    SCHED_OPT = ScheduleOptimizer(PROC_DISTANCES, PROBLEM_DEFINITION)
+
+    SOLUTION_DICT = SCHED_OPT.execute_optimizer_pipeline()
+
