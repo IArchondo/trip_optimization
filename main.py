@@ -8,11 +8,14 @@ import logging
 import yaml
 from pathlib import Path
 from datetime import datetime
-from g0_utils.utils import load_problem_definition
-from g1_distance_calculation.DistanceMatrixCalculator import DistanceMatrixCalculator
-from g2_data_processing.DataProcessor import DataProcessor
-from g3_schedule_optimization.ScheduleOptimizer import ScheduleOptimizer
-from g4_schedule_visualization.ScheduleVisualizer import ScheduleVisualizer
+
+from sched_opt.g0_utils.utils import load_problem_definition
+from sched_opt.g1_distance_calculation.DistanceMatrixCalculator import (
+    DistanceMatrixCalculator,
+)
+from sched_opt.g2_data_processing.DataProcessor import DataProcessor
+from sched_opt.g3_schedule_optimization.ScheduleOptimizer import ScheduleOptimizer
+from sched_opt.g4_schedule_visualization.ScheduleVisualizer import ScheduleVisualizer
 
 logging.basicConfig(level=logging.INFO)
 

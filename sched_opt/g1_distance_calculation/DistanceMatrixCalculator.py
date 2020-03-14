@@ -6,7 +6,7 @@ import pickle
 import time
 from pathlib import Path
 from itertools import combinations
-from g0_utils.utils import load_standard_date
+from sched_opt.g0_utils.utils import load_standard_date
 
 LOGGER = logging.getLogger("DistanceMatrixCalculator")
 
