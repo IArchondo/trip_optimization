@@ -54,7 +54,8 @@ class ScheduleOptimizer:
         manager = pywrapcp.RoutingIndexManager(
             len(data_model.distance_matrix),
             data_model.num_days,
-            data_model.hotel_index,
+            [data_model.hotel_index] * data_model.num_days,
+            [data_model.hotel_index] * data_model.num_days,
         )
 
         # Create Routing Model.
@@ -78,12 +79,19 @@ class ScheduleOptimizer:
         routing.AddDimension(
             transit_callback_index,
             0,  # no slack
-            30000000,  # vehicle maximum travel distance
+            6000000000,  # vehicle maximum travel distance
             True,  # start cumul to zero
             dimension_name,
         )
         distance_dimension = routing.GetDimensionOrDie(dimension_name)
         distance_dimension.SetGlobalSpanCostCoefficient(100)
+
+        # NEW: Add disjunctions with high penalty to discourage skipping destinations
+        penalty = 100000  # Big penalty so solver avoids skipping
+        for node in range(len(self.localization_data.places)):
+            if node == data_model.hotel_index:
+                continue
+            routing.AddDisjunction([manager.NodeToIndex(node)], penalty)
 
         # Setting first solution heuristic.
         search_parameters = pywrapcp.DefaultRoutingSearchParameters()
@@ -108,18 +116,20 @@ class ScheduleOptimizer:
     ) -> dict[int, list[str]]:
         """Extract solution."""
         solution_dict = {}
-
         for day in range(data_model.num_days):
-            stops = []
+            route = []
             index = problem_dict["routing"].Start(day)
-            hotel_index = index
 
             while not problem_dict["routing"].IsEnd(index):
-                stops.append(self.localization_data.places[problem_dict["manager"].IndexToNode(index)])
+                node_index = problem_dict["manager"].IndexToNode(index)
+                route.append(self.localization_data.places[node_index])
                 index = solution.Value(problem_dict["routing"].NextVar(index))
 
-            stops.append(self.localization_data.places[problem_dict["manager"].IndexToNode(hotel_index)])
-            solution_dict[day] = stops
+            # Add final stop (which will be hotel, because we forced it)
+            node_index = problem_dict["manager"].IndexToNode(index)
+            route.append(self.localization_data.places[node_index])
+
+            solution_dict[day] = route
 
         return solution_dict
 

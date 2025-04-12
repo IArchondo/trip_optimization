@@ -10,4 +10,4 @@ problem_definition:
     hotel_index: 0
 
 execution_pipeline:
-    fetch_distances: True
+    fetch_distances: False

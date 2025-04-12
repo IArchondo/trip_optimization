@@ -56,15 +56,22 @@ class DataProcessor:
 
     def execute_pipeline(self, distance_output: LocalizationData) -> LocalizationData:
         """Execute data processor pipeline."""
-        combination_distance_stay = self.add_inverse_relationships(distance_output.combination_distance_stay_dict)
+        combination_distance = self.add_inverse_relationships(distance_output.combination_distance_dict)
 
-        combination_distance_stay = self.add_own_combination(combination_distance_stay, distance_output.places)
+        combination_distance = self.add_own_combination(combination_distance, distance_output.places)
 
-        comb_dist_sch = self.add_schedule_dimension(combination_distance_stay, distance_output.places)
+        combination_distance_stay_dict = {
+            (origin, destination): (
+                combination_distance[(origin, destination)] + distance_output.duration_dict[destination][0]
+            )
+            for origin, destination in combination_distance
+        }
+
+        comb_dist_sch = self.add_schedule_dimension(combination_distance_stay_dict, distance_output.places)
 
         return LocalizationData(
-            combination_distance_dict=distance_output.combination_distance_dict,
-            combination_distance_stay_dict=combination_distance_stay,
+            combination_distance_dict=combination_distance,
+            combination_distance_stay_dict=combination_distance_stay_dict,
             places=distance_output.places,
             duration_dict=distance_output.duration_dict,
             places_geocoding_dict=distance_output.places_geocoding_dict,

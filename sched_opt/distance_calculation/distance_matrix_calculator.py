@@ -21,10 +21,10 @@ class LocalizationData:
     """Hold all outputs from distance calculator."""
 
     combination_distance_dict: dict[tuple[str, str], float]
-    combination_distance_stay_dict: dict[tuple[str, str], float]
     places: list[str]
     duration_dict: dict[str, list[float]]
     places_geocoding_dict: dict[str, float]
+    combination_distance_stay_dict: dict[tuple[str, str], float] = field(default_factory=dict)
     comb_dist_sch: dict[tuple[str, str, int], float] = field(default_factory=dict)
 
 
@@ -80,7 +80,7 @@ class DistanceMatrixCalculator:
         directions_result = self.gmaps.directions(
             place_tuple[0],
             place_tuple[1],
-            mode="driving",
+            mode="transit",
             departure_time=self.standard_date,
         )
 
@@ -107,14 +107,8 @@ class DistanceMatrixCalculator:
             combination: self.get_travel_time(combination) for combination in self.combination_list
         }
 
-        self.combination_distance_stay_dict = {
-            combination: (self.combination_distance_dict[combination] + self.duration_dict[combination[0]][0])
-            for combination in self.combination_list
-        }
-
         output = LocalizationData(
             combination_distance_dict=self.combination_distance_dict,
-            combination_distance_stay_dict=self.combination_distance_stay_dict,
             places=self.places,
             duration_dict=self.duration_dict,
             places_geocoding_dict=self.places_geocoding,
