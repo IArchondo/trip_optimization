@@ -1,9 +1,8 @@
 """Calculate distances between places."""
 
 import logging
-import pickle
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from itertools import combinations
 from pathlib import Path
 from typing import Any
@@ -26,7 +25,7 @@ class LocalizationData:
     places: list[str]
     duration_dict: dict[str, list[float]]
     places_geocoding_dict: dict[str, float]
-    comb_dist_sch: dict[tuple[str, str, int], float] = {}
+    comb_dist_sch: dict[tuple[str, str, int], float] = field(default_factory=dict)
 
 
 class DistanceMatrixCalculator:
@@ -91,7 +90,7 @@ class DistanceMatrixCalculator:
 
         return float(round(travel_time / 60, 3))
 
-    def execute_pipeline(self, save_output: bool = False) -> LocalizationData:
+    def execute_pipeline(self) -> LocalizationData:
         """Execute complete pipeline."""
         LOGGER.info("Executing pipeline")
 
@@ -120,10 +119,5 @@ class DistanceMatrixCalculator:
             duration_dict=self.duration_dict,
             places_geocoding_dict=self.places_geocoding,
         )
-
-        if save_output:
-            LOGGER.info("Saving output under latest_distances.pickle")
-            with open(Path("00_saved_data/saved_distances") / "latest_distances.pickle", "wb") as handle:
-                pickle.dump(output, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         return output

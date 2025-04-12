@@ -4,7 +4,8 @@ import logging
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from distance_calculation.distance_matrix_calculator import LocalizationData  # type: ignore
+
+from sched_opt.distance_calculation.distance_matrix_calculator import LocalizationData  # type: ignore
 
 LOGGER = logging.getLogger("ScheduleVisualizer")
 
@@ -27,7 +28,7 @@ class ScheduleVisualizer:
         """Extract coordinates from processed distances dictionary."""
         coord_dict = {}
         for place in list(localization.places):
-            coords = localization.places_geocoding_dict[place][0]["geometry"]["location"]
+            coords = localization.places_geocoding_dict[place][0]["geometry"]["location"]  # type: ignore
             coord_dict[place] = {"lng": coords["lng"], "lat": coords["lat"]}
 
         return coord_dict
@@ -58,8 +59,8 @@ class ScheduleVisualizer:
         ymin = filt_coors["lat"].min() - 0.01
         ymax = filt_coors["lat"].max() + 0.01
 
-        hotel_x = coord_table[coord_table["place"] == "Calle Canarias 31, 4F 28045 Madrid-Madrid"]["lng"].iloc[0]
-        hotel_y = coord_table[coord_table["place"] == "Calle Canarias 31, 4F 28045 Madrid-Madrid"]["lat"].iloc[0]
+        hotel_x = coord_table.iloc[0]["lng"]
+        hotel_y = coord_table.iloc[0]["lat"]
 
         _, ax = plt.subplots(figsize=(16, 8.3))
 
