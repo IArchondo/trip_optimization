@@ -41,5 +41,5 @@ lint.ignore = [
     "S301", # Pickle
     "D413", # Blank line after last section
     "D107", # Missing docstring in __init__
-    "N999"
+    "S605"
 ]
