@@ -18,7 +18,7 @@ LOGGER = logging.getLogger("DistanceMatrixCalculator")
 
 
 @dataclass
-class DistanceOutput:
+class LocalizationData:
     """Hold all outputs from distance calculator."""
 
     combination_distance_dict: dict[tuple[str, str], float]
@@ -91,7 +91,7 @@ class DistanceMatrixCalculator:
 
         return float(round(travel_time / 60, 3))
 
-    def execute_pipeline(self, save_output: bool = False) -> DistanceOutput:
+    def execute_pipeline(self, save_output: bool = False) -> LocalizationData:
         """Execute complete pipeline."""
         LOGGER.info("Executing pipeline")
 
@@ -113,7 +113,7 @@ class DistanceMatrixCalculator:
             for combination in self.combination_list
         }
 
-        output = DistanceOutput(
+        output = LocalizationData(
             combination_distance_dict=self.combination_distance_dict,
             combination_distance_stay_dict=self.combination_distance_stay_dict,
             places=self.places,

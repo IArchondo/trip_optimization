@@ -2,7 +2,7 @@
 
 import logging
 
-from sched_opt.g1_distance_calculation.distance_matrix_calculator import DistanceOutput
+from sched_opt.g1_distance_calculation.distance_matrix_calculator import LocalizationData
 
 LOGGER = logging.getLogger("DataProcessor")
 
@@ -54,7 +54,7 @@ class DataProcessor:
 
         return comb_dist_sch
 
-    def execute_pipeline(self, distance_output: DistanceOutput) -> DistanceOutput:
+    def execute_pipeline(self, distance_output: LocalizationData) -> LocalizationData:
         """Execute data processor pipeline."""
         combination_distance_stay = self.add_inverse_relationships(distance_output.combination_distance_stay_dict)
 
@@ -62,7 +62,7 @@ class DataProcessor:
 
         comb_dist_sch = self.add_schedule_dimension(combination_distance_stay, distance_output.places)
 
-        return DistanceOutput(
+        return LocalizationData(
             combination_distance_dict=distance_output.combination_distance_dict,
             combination_distance_stay_dict=combination_distance_stay,
             places=distance_output.places,
