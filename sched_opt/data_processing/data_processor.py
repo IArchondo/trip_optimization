@@ -2,7 +2,7 @@
 
 import logging
 
-from sched_opt.g1_distance_calculation.distance_matrix_calculator import LocalizationData
+from sched_opt.distance_calculation.distance_matrix_calculator import LocalizationData
 
 LOGGER = logging.getLogger("DataProcessor")
 

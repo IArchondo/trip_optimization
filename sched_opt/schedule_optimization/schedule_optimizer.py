@@ -6,8 +6,8 @@ from typing import Any
 
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2  # type: ignore
 
+from sched_opt.distance_calculation.distance_matrix_calculator import LocalizationData
 from sched_opt.g0_utils.utils import ProblemDefinition
-from sched_opt.g1_distance_calculation.distance_matrix_calculator import LocalizationData
 
 LOGGER = logging.getLogger("ScheduleOptimizer")
 
