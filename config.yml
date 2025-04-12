@@ -1,13 +1,13 @@
-standard_time: 
-    year: 2020
+standard_time:
+    year: 2025
     month: 4
-    day: 10
+    day: 25
     hour: 16
     minute: 0
 
 problem_definition:
-    num_days: 4
-    hotel_index: 8
-    
+    num_days: 6
+    hotel_index: 0
+
 execution_pipeline:
-    fetch_distances: False
+    fetch_distances: True

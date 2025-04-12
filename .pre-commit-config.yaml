@@ -1,0 +1,30 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.2.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: no-commit-to-branch
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.0
+    hooks:
+      - id: ruff  # Run the linter.
+        args: [ --fix ]
+      - id: ruff-format # Run the formatter.
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: "8cd2d40"
+    hooks:
+    -   id: mypy
+        language: system
+        entry: poetry run mypy
+        types_or: [python, pyi]
+        args: [--strict, --check-untyped-defs, --install-types, --non-interactive, --no-warn-unused-ignores]
+  - repo: local
+    hooks:
+    - id: jupyter-nb-clear-output
+      name: jupyter-no-clear-output
+      files: \.ipynb$
+      language: system
+      entry: jupyter nbconvert --clear-output --inplace

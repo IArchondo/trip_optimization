@@ -26,6 +26,7 @@ class DistanceOutput:
     places: list[str]
     duration_dict: dict[str, list[float]]
     places_geocoding_dict: dict[str, float]
+    comb_dist_sch: dict[tuple[str, str, int], float] = {}
 
 
 class DistanceMatrixCalculator:
