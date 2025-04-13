@@ -1,8 +1,11 @@
 """Implement Gurobi optimizer."""
 
+import logging
+import time
 from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any
 
 from gurobipy import GRB  # type: ignore
@@ -15,9 +18,13 @@ from sched_opt.schedule_optimization.flexible_solver import (
     Objective,
     ObjectiveDirection,
     ORToolsSolver,
+    SolverStatus,
+    get_solution_value,
 )
 
 TOTAL_TIME_IN_DAY = 10 * 60
+
+logger = logging.getLogger("Hola")
 
 
 @dataclass
@@ -191,7 +198,7 @@ def generate_constraints(model: BaseSolver, model_inputs: ModelInputs, assignmen
 def define_time_travelled(model_input: ModelInputs, assignments: AssignmentDict) -> Any:
     """Define time travelled."""
     return sum(
-        model_input.trips[(origin, destination)] * assignment
+        model_input.trips[(origin, destination)].duration * assignment
         for _, day_tasks_for_mechanic in assignments.items()
         for (origin, destination), assignment in day_tasks_for_mechanic.items()
     )
@@ -218,15 +225,71 @@ def generate_objective_function(
     return obj_elements
 
 
-def define_model(model_inputs: ModelInputs, problem_definition: ProblemDefinition) -> None:
+def define_model(model_inputs: ModelInputs, problem_definition: ProblemDefinition) -> tuple[BaseSolver, AssignmentDict]:
     """Define model."""
     model = initiate_model()
     variables = generate_variables(model, model_inputs, problem_definition)
     generate_constraints(model, model_inputs, variables)
     generate_objective_function(model, model_inputs, variables)
+    return model, variables
 
 
-def run_new_solver(loc: LocalizationData, problem_definition: ProblemDefinition) -> None:
+def solve_model(solver: BaseSolver) -> float:
+    """Solve defined model."""
+    # Solve
+    solver.set_params(
+        # relative_mip_gap=config.solver.mip_gap_pct,
+        time_limit=timedelta(minutes=1),
+        # time_limit_no_improvement=(
+        #     timedelta(seconds=config.solver.time_limit_no_improvement_in_seconds)
+        # if config.solver.use_gurobi else None
+        # ),
+    )
+    start_time = time.time()
+    status = solver.solve()
+    runtime = time.time() - start_time
+    logger.info(f"Solve completed in {runtime:.2f} seconds")
+
+    status_infeasible = status not in [SolverStatus.OPTIMAL, SolverStatus.FEASIBLE]
+    number_solutions = solver.get_number_solutions()
+    if status_infeasible or number_solutions == 0:
+        logger.warning("Model failed to solve.")
+
+    # if config.solver.lp_file_always or (config.solver.lp_file_when_failed and status_infeasible):
+    # solver.export_model_as_lp_format("model.lp")
+    # logger.info(f"Model error stored at model.lp.")
+
+    # if config.solver.iis_when_failed and status_infeasible:
+    #     _write_iis(lp_file_path)
+    #     logger.info("IIS file stored.")
+
+    if status_infeasible:
+        logger.info("Optimizer did not complete.")
+
+    logger.info("Model solved successfully!")
+    logger.debug(f"Objective value is {solver.get_objective_value()}")
+
+    return runtime
+
+
+def extract_solution(model_inputs: ModelInputs, assignments: AssignmentDict) -> dict[int, list[str]]:
+    """Extract solution from solver."""
+    #  mechanic_tasks: dict[Mechanic, set[TaskId]] = {mechanic: set({}) for mechanic in instance.mechanics.values()}
+    solution_dict: dict[int, list[str]] = {}
+
+    for day, day_tasks in assignments.items():
+        solution_dict[day] = []
+        for (from_task, _), assignment in day_tasks.items():
+            if get_solution_value(assignment) >= 1:
+                solution_dict[day].append(from_task)
+        solution_dict[day].append(model_inputs.hotel)
+
+    return solution_dict
+
+
+def run_new_solver(loc: LocalizationData, problem_definition: ProblemDefinition) -> dict[int, list[str]]:
     """Run new solver."""
     model_inputs = create_model_inputs(loc, problem_definition)
-    define_model(model_inputs, problem_definition)
+    solver, variables = define_model(model_inputs, problem_definition)
+    solve_model(solver)
+    return extract_solution(model_inputs, variables)
