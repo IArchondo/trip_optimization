@@ -1,4 +1,4 @@
-"""Hold schedule optimizer."""
+"""Optimize schedule."""
 
 import logging
 from dataclasses import dataclass
@@ -27,11 +27,10 @@ class ScheduleOptimizer:
     def __init__(self, localization_data: LocalizationData, problem_definition: ProblemDefinition) -> None:
         """Initiate class."""
         self.localization_data = localization_data
-
         self.num_days = problem_definition.num_days
         self.hotel_index = problem_definition.hotel_index
 
-        ## create data model
+        # Create data model
         self.data_model = self.__create_data_model(self.localization_data, self.num_days, self.hotel_index)
 
     def __create_data_model(self, localization_data: LocalizationData, num_days: int, hotel_index: int) -> DataModel:
@@ -41,7 +40,7 @@ class ScheduleOptimizer:
             distance: list[float] = []
             for destination in localization_data.places:
                 if place == destination:
-                    distance.append(0.0)
+                    distance.append(10000000.0)
                 else:
                     distance.append(localization_data.combination_distance_stay_dict[(place, destination)])
 
@@ -64,46 +63,49 @@ class ScheduleOptimizer:
         # Create and register a transit callback.
         def distance_callback(from_index: int, to_index: int) -> Any:
             """Return the distance between the two nodes."""
-            # Convert from routing variable Index to distance matrix NodeIndex.
             from_node = manager.IndexToNode(from_index)
             to_node = manager.IndexToNode(to_index)
             return data_model.distance_matrix[from_node][to_node]
 
         transit_callback_index = routing.RegisterTransitCallback(distance_callback)
-
-        # Define cost of each arc.
         routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
 
-        # Add Distance constraint.
+        # Distance constraint
         dimension_name = "Distance"
         routing.AddDimension(
             transit_callback_index,
             0,  # no slack
-            6000000000,  # vehicle maximum travel distance
+            10,  # realistic max distance per day (change as needed)
             True,  # start cumul to zero
             dimension_name,
         )
         distance_dimension = routing.GetDimensionOrDie(dimension_name)
+
+        # This tries to balance travel length across days
         distance_dimension.SetGlobalSpanCostCoefficient(100)
 
-        # NEW: Add disjunctions with high penalty to discourage skipping destinations
-        penalty = 100000  # Big penalty so solver avoids skipping
+        # OPTIONAL: Enforce upper bounds more strictly:
+        for day in range(data_model.num_days):
+            distance_dimension.SetSpanUpperBoundForVehicle(20000, day)
+
+        # Avoid skipping locations (disjunctions)
+        penalty = 100000  # Big penalty to discourage skipping
         for node in range(len(self.localization_data.places)):
             if node == data_model.hotel_index:
                 continue
             routing.AddDisjunction([manager.NodeToIndex(node)], penalty)
 
-        # Setting first solution heuristic.
+        # Search parameters: Add metaheuristics to improve solution
         search_parameters = pywrapcp.DefaultRoutingSearchParameters()
         search_parameters.first_solution_strategy = routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
+        search_parameters.local_search_metaheuristic = routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
+        search_parameters.time_limit.FromSeconds(10)
 
-        output_dict = {
+        return {
             "manager": manager,
             "routing": routing,
             "search_parameters": search_parameters,
         }
-
-        return output_dict
 
     def solve_problem(self, problem_dict: dict[str, Any]) -> pywrapcp.Assignment:
         """Solve problem."""
@@ -116,6 +118,8 @@ class ScheduleOptimizer:
     ) -> dict[int, list[str]]:
         """Extract solution."""
         solution_dict = {}
+        # distance_dimension = problem_dict["routing"].GetDimensionOrDie("Distance")
+
         for day in range(data_model.num_days):
             route = []
             index = problem_dict["routing"].Start(day)
@@ -129,14 +133,18 @@ class ScheduleOptimizer:
             node_index = problem_dict["manager"].IndexToNode(index)
             route.append(self.localization_data.places[node_index])
 
+            # m = distance_dimension.CumulVar(index).Value()
+
+            # LOGGER.info(f"Day {index}, Distance: {m}")
+
             solution_dict[day] = route
+            LOGGER.info(f"Day {day + 1}: {route}")
 
         return solution_dict
 
     def execute_optimizer_pipeline(self) -> dict[int, list[str]]:
         """Execute whole optimizer pipeline."""
         problem_dict = self.define_model(self.data_model)
-
         solution = self.solve_problem(problem_dict)
 
         return self.extract_solution(self.data_model, problem_dict, solution)
