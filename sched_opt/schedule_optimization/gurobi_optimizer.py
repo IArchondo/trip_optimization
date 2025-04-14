@@ -22,7 +22,8 @@ from sched_opt.schedule_optimization.flexible_solver import (
     get_solution_value,
 )
 
-TOTAL_TIME_IN_DAY = 10 * 60
+TOTAL_TIME_IN_DAY = 6 * 60
+SOLVE_TIME = 2
 
 logger = logging.getLogger("Hola")
 
@@ -294,7 +295,7 @@ def solve_model(solver: BaseSolver) -> float:
     # Solve
     solver.set_params(
         # relative_mip_gap=config.solver.mip_gap_pct,
-        time_limit=timedelta(minutes=0.5),
+        time_limit=timedelta(minutes=SOLVE_TIME),
         # time_limit_no_improvement=(
         #     timedelta(seconds=config.solver.time_limit_no_improvement_in_seconds)
         # if config.solver.use_gurobi else None
