@@ -11,7 +11,7 @@ from typing import Any
 from gurobipy import GRB  # type: ignore
 
 from sched_opt.distance_calculation.distance_matrix_calculator import LocalizationData
-from sched_opt.g0_utils.utils import ProblemDefinition
+from sched_opt.g0_utils.utils import ProblemDefinition, order_route_from_start, transform_route_to_list_of_destinations
 from sched_opt.schedule_optimization.flexible_solver import (
     BaseSolver,
     NamedConstraint,
@@ -61,11 +61,21 @@ class ModelInputs:
     activities: dict[str, Activity]
     trips: dict[tuple[str, str], Trip]
     hotel: str
+    no_of_days: int
 
 
 Variable = Any
 
 AssignmentDict = dict[int, dict[tuple[str, str], Variable]]
+UVarsDict = dict[tuple[int, str], Variable]
+
+
+@dataclass
+class Variables:
+    """Hold all variables from the model."""
+
+    assignments: AssignmentDict
+    u_vars: UVarsDict
 
 
 def initiate_model() -> BaseSolver:
@@ -76,7 +86,7 @@ def initiate_model() -> BaseSolver:
     return ORToolsSolver(**solver_arguments)
 
 
-def create_model_inputs(loc: LocalizationData, model_definition: ProblemDefinition) -> ModelInputs:
+def create_model_inputs(loc: LocalizationData, problem_definition: ProblemDefinition) -> ModelInputs:
     """Preprocess inputs for model."""
     activities = {place: Activity(name=place, activity_duration=loc.duration_dict[place][0]) for place in loc.places}
     trips = {
@@ -88,11 +98,15 @@ def create_model_inputs(loc: LocalizationData, model_definition: ProblemDefiniti
             + activities[destination].activity_duration,
         )
         for origin, destination in loc.combination_distance_dict
+        if origin != destination
     }
-    return ModelInputs(activities, trips, hotel=loc.places[model_definition.hotel_index])
+    hotel = loc.places[problem_definition.hotel_index]
+    # add stay home
+    trips[(hotel, hotel)] = Trip(origin=hotel, destination=hotel, duration=1, duration_incl_activity_length=1)
+    return ModelInputs(activities, trips, hotel=hotel, no_of_days=problem_definition.num_days)
 
 
-def generate_variables(
+def generate_assignment_variables(
     solver: BaseSolver, model_inputs: ModelInputs, problem_definition: ProblemDefinition
 ) -> AssignmentDict:
     """Generate variables for model."""
@@ -107,6 +121,26 @@ def generate_variables(
             )
             num_vars += 1
     return assignment_vars
+
+
+def generate_u_vars(solver: BaseSolver, model_inputs: ModelInputs, problem_definition: ProblemDefinition) -> UVarsDict:
+    """Generate u vars to prevent subroutes."""
+    return {
+        (day, place): solver.add_num_var(lb=0, ub=len(model_inputs.activities), name=f"u[{day}][{place}]")
+        for day in range(problem_definition.num_days)
+        for place in model_inputs.activities
+        if place != model_inputs.hotel
+    }
+
+
+def generate_variables(
+    solver: BaseSolver, model_inputs: ModelInputs, problem_definition: ProblemDefinition
+) -> Variables:
+    """Generate model variables."""
+    return Variables(
+        assignments=generate_assignment_variables(solver, model_inputs, problem_definition),
+        u_vars=generate_u_vars(solver, model_inputs, problem_definition),
+    )
 
 
 def start_and_return_hotel(model_inputs: ModelInputs, assignments: AssignmentDict) -> Iterable[NamedConstraint]:
@@ -154,7 +188,7 @@ def all_activities_assigned(model_inputs: ModelInputs, assign: AssignmentDict) -
                 variable
                 for _, mechanic_day_assignments in assign.items()
                 for (origin, _), variable in mechanic_day_assignments.items()
-                if origin == activity.name
+                if origin == activity.name  # and origin!=model_inputs.hotel
             )
             >= 1,  # It must be assigned
         )
@@ -173,21 +207,32 @@ def day_time_limit(model_inputs: ModelInputs, assign: AssignmentDict) -> Iterabl
         )
 
 
-#    # get all variables in a day
-#    for day in assign:
-#         yield NamedConstraint(
-#             name=f"activities_fit_within_day[{day}]",
-#             constraint
-#         )
+def no_subroutes(model_inputs: ModelInputs, variables: Variables) -> Iterable[NamedConstraint]:
+    """Constraint preventing subroutes."""
+    for day in range(model_inputs.no_of_days):
+        for i in model_inputs.activities:
+            for j in model_inputs.activities:
+                if i == j or i == model_inputs.hotel or j == model_inputs.hotel:
+                    continue
+                yield NamedConstraint(
+                    name=f"subtour_elim[{day}][{i}][{j}]",
+                    constraint=(
+                        variables.u_vars[(day, i)]
+                        - variables.u_vars[(day, j)]
+                        + len(model_inputs.activities) * variables.assignments[day][(i, j)]
+                        <= len(model_inputs.activities) - 1
+                    ),
+                )
 
 
-def generate_constraints(model: BaseSolver, model_inputs: ModelInputs, assignments: AssignmentDict) -> None:
+def generate_constraints(model: BaseSolver, model_inputs: ModelInputs, variables: Variables) -> None:
     """Generate constraints."""
     constraint_generators = {
-        "start_return_hotel": start_and_return_hotel(model_inputs, assignments),
-        "start_next_where_you_finished": activity_after_activity(assignments),
-        "all_activities_assigned": all_activities_assigned(model_inputs, assignments),
-        "next_activity_starts_after_duration": day_time_limit(model_inputs, assignments),
+        "start_return_hotel": start_and_return_hotel(model_inputs, variables.assignments),
+        "start_next_where_you_finished": activity_after_activity(variables.assignments),
+        "all_activities_assigned": all_activities_assigned(model_inputs, variables.assignments),
+        "next_activity_starts_after_duration": day_time_limit(model_inputs, variables.assignments),
+        "no subroutes": no_subroutes(model_inputs, variables),
     }
 
     for _, constraint_generator in constraint_generators.items():
@@ -218,19 +263,19 @@ def get_objective_function(solver: BaseSolver, model_inputs: ModelInputs, variab
 
 
 def generate_objective_function(
-    solver: BaseSolver, model_inputs: ModelInputs, variables: AssignmentDict
+    solver: BaseSolver, model_inputs: ModelInputs, assignments: AssignmentDict
 ) -> dict[str, Any]:
     """Generate model objective function."""
-    obj_elements = get_objective_function(solver, model_inputs, variables)
+    obj_elements = get_objective_function(solver, model_inputs, assignments)
     return obj_elements
 
 
-def define_model(model_inputs: ModelInputs, problem_definition: ProblemDefinition) -> tuple[BaseSolver, AssignmentDict]:
+def define_model(model_inputs: ModelInputs, problem_definition: ProblemDefinition) -> tuple[BaseSolver, Variables]:
     """Define model."""
     model = initiate_model()
     variables = generate_variables(model, model_inputs, problem_definition)
     generate_constraints(model, model_inputs, variables)
-    generate_objective_function(model, model_inputs, variables)
+    generate_objective_function(model, model_inputs, variables.assignments)
     return model, variables
 
 
@@ -239,7 +284,7 @@ def solve_model(solver: BaseSolver) -> float:
     # Solve
     solver.set_params(
         # relative_mip_gap=config.solver.mip_gap_pct,
-        time_limit=timedelta(minutes=1),
+        time_limit=timedelta(minutes=0.5),
         # time_limit_no_improvement=(
         #     timedelta(seconds=config.solver.time_limit_no_improvement_in_seconds)
         # if config.solver.use_gurobi else None
@@ -278,11 +323,13 @@ def extract_solution(model_inputs: ModelInputs, assignments: AssignmentDict) -> 
     solution_dict: dict[int, list[str]] = {}
 
     for day, day_tasks in assignments.items():
-        solution_dict[day] = []
-        for (from_task, _), assignment in day_tasks.items():
+        unordered_route = []
+        for (origin, destination), assignment in day_tasks.items():
             if get_solution_value(assignment) >= 1:
-                solution_dict[day].append(from_task)
-        solution_dict[day].append(model_inputs.hotel)
+                unordered_route.append((origin, destination))
+
+        ordered_route = order_route_from_start(unordered_route, model_inputs.hotel)
+        solution_dict[day] = transform_route_to_list_of_destinations(ordered_route, model_inputs.hotel)
 
     return solution_dict
 
@@ -292,4 +339,4 @@ def run_new_solver(loc: LocalizationData, problem_definition: ProblemDefinition)
     model_inputs = create_model_inputs(loc, problem_definition)
     solver, variables = define_model(model_inputs, problem_definition)
     solve_model(solver)
-    return extract_solution(model_inputs, variables)
+    return extract_solution(model_inputs, variables.assignments)
