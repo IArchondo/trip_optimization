@@ -41,7 +41,7 @@ class Activity:
 
     name: str
     activity_duration: float
-    # coords: Coordinates = Coordinates(0.0, 0.0)
+    coords: Coordinates
 
 
 @dataclass
@@ -86,9 +86,18 @@ def initiate_model() -> BaseSolver:
     return ORToolsSolver(**solver_arguments)
 
 
+def get_coordinates(loc: LocalizationData, place: str) -> Coordinates:
+    """Get coordinates for a place."""
+    location = loc.places_geocoding_dict[place][0]["geometry"]["location"]  # type: ignore
+    return Coordinates(lng=location["lng"], lat=location["lat"])
+
+
 def create_model_inputs(loc: LocalizationData, problem_definition: ProblemDefinition) -> ModelInputs:
     """Preprocess inputs for model."""
-    activities = {place: Activity(name=place, activity_duration=loc.duration_dict[place][0]) for place in loc.places}
+    activities = {
+        place: Activity(name=place, activity_duration=loc.duration_dict[place][0], coords=get_coordinates(loc, place))
+        for place in loc.places
+    }
     trips = {
         (origin, destination): Trip(
             origin=origin,
@@ -178,19 +187,20 @@ def activity_after_activity(
 
 
 def all_activities_assigned(model_inputs: ModelInputs, assign: AssignmentDict) -> Iterable[NamedConstraint]:
-    """All activities that are assigned."""
+    """Ensure each activity is assigned exactly once (excluding hotel)."""
     for activity in model_inputs.activities.values():
-        # due_day = (task.due_date - constants.TIME_EPSILON).date()  # Ensure 00:00:00 next day is mapped to due day
-        # if due_day <= max(instance.schedule_days):
+        if activity.name == model_inputs.hotel:
+            continue  # skip hotel
+
         yield NamedConstraint(
-            name=f"mandatory_task_assigned[{activity}]",
+            name=f"mandatory_task_assigned[{activity.name}]",
             constraint=sum(
                 variable
                 for _, mechanic_day_assignments in assign.items()
                 for (origin, _), variable in mechanic_day_assignments.items()
-                if origin == activity.name  # and origin!=model_inputs.hotel
+                if origin == activity.name
             )
-            >= 1,  # It must be assigned
+            == 1,  # Assign exactly once
         )
 
 
