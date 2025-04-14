@@ -22,8 +22,8 @@ from sched_opt.schedule_optimization.flexible_solver import (
     get_solution_value,
 )
 
-TOTAL_TIME_IN_DAY = 6 * 60
-SOLVE_TIME = 2
+TOTAL_TIME_IN_DAY = 12 * 60
+SOLVE_TIME = 30
 
 logger = logging.getLogger("Hola")
 
@@ -269,7 +269,7 @@ def get_objective_function(solver: BaseSolver, model_inputs: ModelInputs, variab
         obj_vars[obj_name] = solver.add_num_var(lb=-GRB.INFINITY, ub=GRB.INFINITY, name="obj_var_" + obj_name)
         solver.add_constraint(NamedConstraint(name="obj_const_" + obj_name, constraint=obj_vars[obj_name] == obj_expr))
 
-    solver.set_objective(Objective(sum(obj_vars.values()), direction=ObjectiveDirection.MAXIMIZE))
+    solver.set_objective(Objective(sum(obj_vars.values()), direction=ObjectiveDirection.MINIMIZE))
     return obj_vars
 
 
