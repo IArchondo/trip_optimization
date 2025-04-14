@@ -175,11 +175,16 @@ def generate_schedules(model_inputs: ModelInputs, solution: dict[int, list[str]]
         timeline = []
 
         for origin, destination in trips:
-            timeline.append({"time": current_time.strftime("%H:%M"), "activity": origin})
+            timeline.append(
+                {
+                    "activity": origin,
+                    "time": current_time.strftime("%H:%M"),
+                }
+            )
             current_time += timedelta(minutes=model_inputs.activities[origin].activity_duration)
-            timeline.append({"time": current_time.strftime("%H:%M"), "activity": "travel"})
+            timeline.append({"activity": "travel", "time": current_time.strftime("%H:%M")})
             current_time += timedelta(minutes=model_inputs.trips[(origin, destination)].duration)
-        timeline.append({"time": current_time.strftime("%H:%M"), "activity": model_inputs.hotel})
+        timeline.append({"activity": model_inputs.hotel, "time": current_time.strftime("%H:%M")})
         pd.DataFrame(timeline).to_excel(folder_path / f"schedule_day_{day}.xlsx")
 
 
