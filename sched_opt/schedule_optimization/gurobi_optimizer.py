@@ -344,9 +344,11 @@ def extract_solution(model_inputs: ModelInputs, assignments: AssignmentDict) -> 
     return solution_dict
 
 
-def run_new_solver(loc: LocalizationData, problem_definition: ProblemDefinition) -> dict[int, list[str]]:
+def run_new_solver(
+    loc: LocalizationData, problem_definition: ProblemDefinition
+) -> tuple[ModelInputs, dict[int, list[str]]]:
     """Run new solver."""
     model_inputs = create_model_inputs(loc, problem_definition)
     solver, variables = define_model(model_inputs, problem_definition)
     solve_model(solver)
-    return extract_solution(model_inputs, variables.assignments)
+    return model_inputs, extract_solution(model_inputs, variables.assignments)
