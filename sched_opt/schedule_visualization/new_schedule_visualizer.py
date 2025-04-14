@@ -1,10 +1,17 @@
 """Define new visualizer."""
 
 import logging
+from datetime import datetime, timedelta
+from pathlib import Path
 
 import matplotlib.pyplot as plt
+import pandas as pd
+from PIL import Image
+from reportlab.lib.pagesizes import A4  # type: ignore
+from reportlab.lib.units import inch  # type: ignore
+from reportlab.pdfgen import canvas  # type: ignore
 
-from sched_opt.schedule_optimization.gurobi_optimizer import ModelInputs
+from sched_opt.elements import ModelInputs
 
 logger = logging.getLogger("ScheduleVisualizer")
 
@@ -36,14 +43,15 @@ def generate_day_route_output(
 
     destination_list = []
     for ix, destination in enumerate(solution[day_to_plot]):
-        ax.annotate(
-            f"{ix}-{destination}",
-            (
-                model_inputs.activities[destination].coords.lng,
-                model_inputs.activities[destination].coords.lat,
-            ),
-        )
         destination_list.append(f"{ix}-{destination}")
+        if destination != model_inputs.hotel:
+            ax.annotate(
+                f"{ix}-{destination}",
+                (
+                    model_inputs.activities[destination].coords.lng,
+                    model_inputs.activities[destination].coords.lat,
+                ),
+            )
 
         ax.scatter(
             model_inputs.activities[destination].coords.lng,
@@ -93,9 +101,95 @@ def generate_day_route_output(
         text_file.write("\n".join(destination_list))
 
 
+def generate_trip_report_pdf(model_inputs: ModelInputs, current_run: str) -> None:
+    """Generate trip report as pdf."""
+    folder_path = Path("02_reports") / f"{current_run}"
+    folder = Path(folder_path)
+
+    # Create PDF canvas
+    c = canvas.Canvas(str(folder_path / "report.pdf"), pagesize=A4)
+    width, height = A4
+
+    for day in range(model_inputs.no_of_days):
+        txt_path = folder / f"route_day_{day}.txt"
+        img_path = folder / f"route_day_{day}.png"
+
+        if not txt_path.exists() or not img_path.exists():
+            break  # Stop when there are no more files
+
+        c.setFont("Helvetica-Bold", 20)
+        c.drawString(1 * inch, height - 1 * inch, f"Day {day}")
+
+        # Draw text
+        c.setFont("Courier", 12)
+        with open(txt_path) as f:
+            lines = f.readlines()
+
+        text_obj = c.beginText(1 * inch, height - 1.5 * inch)
+        for line in lines:
+            text_obj.textLine(line.strip())
+        c.drawText(text_obj)
+
+        # Use PIL to get image size and apply scaling
+        with Image.open(img_path) as img:
+            img_width, img_height = img.size
+
+        # Convert to points (1 pixel = 0.75 points)
+        img_width_pt = img_width * 0.75
+        img_height_pt = img_height * 0.75
+
+        scale_factor = 0.4
+        scaled_width = img_width_pt * scale_factor
+        scaled_height = img_height_pt * scale_factor
+
+        # Position image below text
+        text_block_height = len(lines) * 14  # approx line height in points
+        image_y_position = height - 1.5 * inch - text_block_height - scaled_height - 0.5 * inch
+        image_y_position = max(image_y_position, 1 * inch)  # avoid running off page
+
+        x_pos = (width - scaled_width) / 2
+
+        c.drawImage(
+            str(img_path),
+            x_pos,
+            image_y_position,
+            width=scaled_width,
+            height=scaled_height,
+            preserveAspectRatio=True,
+            mask="auto",
+        )
+
+        c.showPage()
+    c.save()
+
+
+def generate_schedules(model_inputs: ModelInputs, solution: dict[int, list[str]], current_run: str) -> None:
+    """Generate schedules for each day."""
+    folder_path = Path("02_reports") / f"{current_run}"
+
+    for day in solution:
+        route = solution[day]
+        trips = list(zip(route, route[1:], strict=False))
+        start_time = datetime.strptime("08:00", "%H:%M")
+        current_time = start_time
+        timeline = []
+
+        for origin, destination in trips:
+            timeline.append({"time": current_time.strftime("%H:%M"), "activity": origin})
+            current_time += timedelta(minutes=model_inputs.activities[origin].activity_duration)
+            timeline.append({"time": current_time.strftime("%H:%M"), "activity": "travel"})
+            current_time += timedelta(minutes=model_inputs.trips[(origin, destination)].duration)
+        timeline.append({"time": current_time.strftime("%H:%M"), "activity": model_inputs.hotel})
+        pd.DataFrame(timeline).to_excel(folder_path / f"schedule_day_{day}.xlsx")
+
+
 def visualize_output(model_inputs: ModelInputs, solution: dict[int, list[str]], current_run: str) -> None:
     """Visualize output."""
     logger.info("Generating trip report")
 
+    generate_schedules(model_inputs, solution, current_run)
+
     for day in range(model_inputs.no_of_days):
         generate_day_route_output(model_inputs, solution, day, current_run)
+
+    generate_trip_report_pdf(model_inputs, current_run)

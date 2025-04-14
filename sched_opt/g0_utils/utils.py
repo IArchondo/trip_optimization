@@ -5,7 +5,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+import pandas as pd
 import yaml
+
+from sched_opt.elements import Trip
 
 
 @dataclass
@@ -14,6 +17,8 @@ class ProblemDefinition:
 
     num_days: int
     hotel_index: int
+    total_hours_in_day: int
+    solve_time_in_minutes: int
 
 
 def load_standard_date() -> datetime:
@@ -43,8 +48,15 @@ def load_problem_definition() -> ProblemDefinition:
 
     num_days = problem_definition_config["num_days"]
     hotel_index = problem_definition_config["hotel_index"]
+    total_hours_in_day = problem_definition_config["total_hours_in_day"]
+    solve_time_in_minutes = problem_definition_config["solve_time_in_minutes"]
 
-    return ProblemDefinition(num_days=num_days, hotel_index=hotel_index)
+    return ProblemDefinition(
+        num_days=num_days,
+        hotel_index=hotel_index,
+        total_hours_in_day=total_hours_in_day,
+        solve_time_in_minutes=solve_time_in_minutes,
+    )
 
 
 def order_route_from_start(unordered_route: list[tuple[str, str]], hotel: str) -> list[tuple[str, str]]:
@@ -78,3 +90,18 @@ def order_route_from_start(unordered_route: list[tuple[str, str]], hotel: str) -
 def transform_route_to_list_of_destinations(route: list[tuple[str, str]], hotel: str) -> list[str]:
     """Transform a route to a list of destinations."""
     return [origin for origin, _ in route] + [hotel]
+
+
+def create_duration_matrix(trips: list[Trip]) -> pd.DataFrame:
+    """Create duration matrix for trips."""
+    # Get all unique places
+    places = sorted({trip.origin for trip in trips} | {trip.destination for trip in trips})
+
+    # Initialize a DataFrame with NaNs
+    matrix = pd.DataFrame(index=places, columns=places, dtype=float)
+
+    # Fill in the matrix
+    for trip in trips:
+        matrix.loc[trip.origin, trip.destination] = trip.duration
+
+    return matrix
