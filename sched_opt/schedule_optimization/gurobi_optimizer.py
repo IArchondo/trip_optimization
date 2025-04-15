@@ -15,6 +15,7 @@ from sched_opt.elements import Activity, Coordinates, ModelInputs, Trip
 from sched_opt.g0_utils.utils import ProblemDefinition, order_route_from_start, transform_route_to_list_of_destinations
 from sched_opt.schedule_optimization.flexible_solver import (
     BaseSolver,
+    GurobiSolver,
     NamedConstraint,
     Objective,
     ObjectiveDirection,
@@ -39,11 +40,15 @@ class Variables:
     u_vars: UVarsDict
 
 
-def initiate_model() -> BaseSolver:
+def initiate_model(problem_definition: ProblemDefinition) -> BaseSolver:
     """Initiate model."""
     solver_arguments = {
         "verbose": True,
     }
+    if problem_definition.use_gurobi:
+        logger.info("Using Gurobi optimizer")
+        return GurobiSolver(**solver_arguments)
+    logger.info("Using OR Tool Optimizer")
     return ORToolsSolver(**solver_arguments)
 
 
@@ -249,7 +254,7 @@ def generate_objective_function(
 
 def define_model(model_inputs: ModelInputs, problem_definition: ProblemDefinition) -> tuple[BaseSolver, Variables]:
     """Define model."""
-    model = initiate_model()
+    model = initiate_model(problem_definition)
     variables = generate_variables(model, model_inputs, problem_definition)
     generate_constraints(model, model_inputs, variables)
     generate_objective_function(model, model_inputs, variables.assignments)

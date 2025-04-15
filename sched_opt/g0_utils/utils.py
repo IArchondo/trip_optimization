@@ -19,6 +19,7 @@ class ProblemDefinition:
     hotel_index: int
     total_hours_in_day: int
     solve_time_in_minutes: int
+    use_gurobi: bool
 
 
 def load_standard_date() -> datetime:
@@ -50,12 +51,14 @@ def load_problem_definition() -> ProblemDefinition:
     hotel_index = problem_definition_config["hotel_index"]
     total_hours_in_day = problem_definition_config["total_hours_in_day"]
     solve_time_in_minutes = problem_definition_config["solve_time_in_minutes"]
+    use_gurobi = problem_definition_config["use_gurobi"]
 
     return ProblemDefinition(
         num_days=num_days,
         hotel_index=hotel_index,
         total_hours_in_day=total_hours_in_day,
         solve_time_in_minutes=solve_time_in_minutes,
+        use_gurobi=use_gurobi,
     )
 
 
