@@ -11,7 +11,7 @@ import googlemaps  # type: ignore
 import pandas as pd
 import yaml
 
-from sched_opt.g0_utils.utils import load_standard_date
+from sched_opt.utils.utils import load_standard_date
 
 LOGGER = logging.getLogger("DistanceMatrixCalculator")
 

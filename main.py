@@ -13,9 +13,9 @@ from sched_opt.data_processing.data_processor import DataProcessor
 from sched_opt.distance_calculation.distance_matrix_calculator import (
     DistanceMatrixCalculator,
 )
-from sched_opt.g0_utils.utils import load_problem_definition
 from sched_opt.schedule_optimization.gurobi_optimizer import run_new_solver
-from sched_opt.schedule_visualization.new_schedule_visualizer import visualize_output
+from sched_opt.schedule_visualization.schedule_visualizer import visualize_output
+from sched_opt.utils.utils import load_problem_definition
 
 logging.basicConfig(level=logging.INFO)
 
@@ -57,15 +57,3 @@ if __name__ == "__main__":
     os.makedirs(f"02_reports/{current_run}")
 
     visualize_output(model_inputs, solution_dict, current_run)
-
-    # copy_file(
-    #     "03_notebook_templates/trip_report_template.ipynb",
-    #     f"02_reports/{current_run}/trip_report_{current_run}.ipynb",
-    # )
-
-    # os.system(
-    #     "jupyter nbconvert --execute --no-input --no-prompt --to html "
-    #     + f"02_reports/{current_run}/trip_report_{current_run}.ipynb"
-    # )
-
-    # os.remove(f"02_reports/{current_run}/trip_report_{current_run}.ipynb")

@@ -11,9 +11,10 @@ from typing import Any
 from gurobipy import GRB  # type: ignore
 
 from sched_opt.distance_calculation.distance_matrix_calculator import LocalizationData
-from sched_opt.g0_utils.utils import ProblemDefinition, order_route_from_start, transform_route_to_list_of_destinations
+from sched_opt.elements import Activity, Coordinates, ModelInputs, Trip
 from sched_opt.schedule_optimization.flexible_solver import (
     BaseSolver,
+    GurobiSolver,
     NamedConstraint,
     Objective,
     ObjectiveDirection,
@@ -21,49 +22,9 @@ from sched_opt.schedule_optimization.flexible_solver import (
     SolverStatus,
     get_solution_value,
 )
-
-TOTAL_TIME_IN_DAY = 12 * 60
-SOLVE_TIME = 30
+from sched_opt.utils.utils import ProblemDefinition, order_route_from_start, transform_route_to_list_of_destinations
 
 logger = logging.getLogger("Hola")
-
-
-@dataclass
-class Coordinates:
-    """Determine a place coordinates."""
-
-    lat: float
-    lng: float
-
-
-@dataclass
-class Activity:
-    """Hold elements for a destination."""
-
-    name: str
-    activity_duration: float
-    coords: Coordinates
-
-
-@dataclass
-class Trip:
-    """Hold elements for a trip."""
-
-    origin: str
-    destination: str
-    duration: float
-    duration_incl_activity_length: float
-
-
-@dataclass
-class ModelInputs:
-    """Gather all model inputs."""
-
-    activities: dict[str, Activity]
-    trips: dict[tuple[str, str], Trip]
-    hotel: str
-    no_of_days: int
-
 
 Variable = Any
 
@@ -79,11 +40,15 @@ class Variables:
     u_vars: UVarsDict
 
 
-def initiate_model() -> BaseSolver:
+def initiate_model(problem_definition: ProblemDefinition) -> BaseSolver:
     """Initiate model."""
     solver_arguments = {
         "verbose": True,
     }
+    if problem_definition.use_gurobi:
+        logger.info("Using Gurobi optimizer")
+        return GurobiSolver(**solver_arguments)
+    logger.info("Using OR Tool Optimizer")
     return ORToolsSolver(**solver_arguments)
 
 
@@ -113,7 +78,13 @@ def create_model_inputs(loc: LocalizationData, problem_definition: ProblemDefini
     hotel = loc.places[problem_definition.hotel_index]
     # add stay home
     trips[(hotel, hotel)] = Trip(origin=hotel, destination=hotel, duration=1, duration_incl_activity_length=1)
-    return ModelInputs(activities, trips, hotel=hotel, no_of_days=problem_definition.num_days)
+    return ModelInputs(
+        activities,
+        trips,
+        hotel=hotel,
+        no_of_days=problem_definition.num_days,
+        total_hours_in_day=problem_definition.total_hours_in_day,
+    )
 
 
 def generate_assignment_variables(
@@ -214,7 +185,7 @@ def day_time_limit(model_inputs: ModelInputs, assign: AssignmentDict) -> Iterabl
                 variable * model_inputs.trips[(origin, destination)].duration_incl_activity_length
                 for (origin, destination), variable in assign[day].items()
             )
-            <= TOTAL_TIME_IN_DAY,
+            <= model_inputs.total_hours_in_day * 60,
         )
 
 
@@ -283,19 +254,19 @@ def generate_objective_function(
 
 def define_model(model_inputs: ModelInputs, problem_definition: ProblemDefinition) -> tuple[BaseSolver, Variables]:
     """Define model."""
-    model = initiate_model()
+    model = initiate_model(problem_definition)
     variables = generate_variables(model, model_inputs, problem_definition)
     generate_constraints(model, model_inputs, variables)
     generate_objective_function(model, model_inputs, variables.assignments)
     return model, variables
 
 
-def solve_model(solver: BaseSolver) -> float:
+def solve_model(solver: BaseSolver, problem_definition: ProblemDefinition) -> float:
     """Solve defined model."""
     # Solve
     solver.set_params(
         # relative_mip_gap=config.solver.mip_gap_pct,
-        time_limit=timedelta(minutes=SOLVE_TIME),
+        time_limit=timedelta(minutes=problem_definition.solve_time_in_minutes),
         # time_limit_no_improvement=(
         #     timedelta(seconds=config.solver.time_limit_no_improvement_in_seconds)
         # if config.solver.use_gurobi else None
@@ -351,5 +322,5 @@ def run_new_solver(
     """Run new solver."""
     model_inputs = create_model_inputs(loc, problem_definition)
     solver, variables = define_model(model_inputs, problem_definition)
-    solve_model(solver)
+    solve_model(solver, problem_definition)
     return model_inputs, extract_solution(model_inputs, variables.assignments)

@@ -8,6 +8,9 @@ standard_time:
 problem_definition:
     num_days: 6
     hotel_index: 0
+    total_hours_in_day: 12
+    solve_time_in_minutes: 1
+    use_gurobi: True
 
 execution_pipeline:
     fetch_distances: False
