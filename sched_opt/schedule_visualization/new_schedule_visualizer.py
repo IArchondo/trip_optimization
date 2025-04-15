@@ -20,6 +20,40 @@ map_image = plt.imread("01_map_data/map_input_1.png")
 BBox = (-74.05, -73.9209, 40.6106, 40.8)
 
 
+def excel_to_image(excel_path: Path, img_output_path: Path) -> None:
+    """Convert Excel file to an image with readable text."""
+    df = pd.read_excel(excel_path)
+
+    font_size = 7
+    row_height = 0.5  # inches per row
+    fig_height = max(1.5, row_height * (len(df) + 1))  # +1 for column header
+
+    fig, ax = plt.subplots(figsize=(10, fig_height))
+    ax.axis("off")
+
+    table = ax.table(
+        cellText=df.values,  # type: ignore
+        colLabels=list(df.columns),
+        loc="center",
+        cellLoc="left",
+        colLoc="left",
+    )
+
+    table.auto_set_font_size(False)
+    table.set_fontsize(font_size)
+
+    # Optional: set column widths or bold headers
+    for (row, _), cell in table.get_celld().items():
+        # cell.set_pad(0.2)
+        if row == 0:
+            cell.set_fontsize(font_size + 1)
+            cell.set_text_props(weight="bold")
+
+    plt.tight_layout()
+    fig.savefig(img_output_path, bbox_inches="tight", dpi=200)
+    plt.close(fig)
+
+
 def generate_day_route_output(
     model_inputs: ModelInputs, solution: dict[int, list[str]], day_to_plot: int, current_run: str
 ) -> None:
@@ -42,9 +76,9 @@ def generate_day_route_output(
 
     _, ax = plt.subplots(figsize=(16, 8.3))
 
-    destination_list = []
+    # destination_list = []
     for ix, destination in enumerate(solution[day_to_plot]):
-        destination_list.append(f"{ix}-{destination}")
+        # destination_list.append(f"{ix}-{destination}")
         if destination != model_inputs.hotel:
             ax.annotate(
                 f"{ix}-{destination}",
@@ -98,73 +132,74 @@ def generate_day_route_output(
     plt.savefig(f"02_reports/{current_run}/route_day_{day_to_plot}.png", bbox_inches="tight")
     plt.close()
 
-    with open(f"02_reports/{current_run}/route_day_{day_to_plot}.txt", "w") as text_file:
-        text_file.write("\n".join(destination_list))
+    # with open(f"02_reports/{current_run}/route_day_{day_to_plot}.txt", "w") as text_file:
+    #     text_file.write("\n".join(destination_list))
 
 
 def generate_trip_report_pdf(model_inputs: ModelInputs, current_run: str) -> None:
-    """Generate trip report as pdf."""
+    """Generate trip report as PDF."""
     folder_path = Path("02_reports") / f"{current_run}"
     folder = Path(folder_path)
 
-    # Create PDF canvas
     c = canvas.Canvas(str(folder_path / "report.pdf"), pagesize=A4)
     width, height = A4
 
     for day in range(model_inputs.no_of_days):
-        txt_path = folder / f"route_day_{day}.txt"
         img_path = folder / f"route_day_{day}.png"
+        table_path = folder / f"schedule_image_day_{day}.jpg"
 
-        if not txt_path.exists() or not img_path.exists():
-            break  # Stop when there are no more files
-
+        # Title
         c.setFont("Helvetica-Bold", 20)
         c.drawString(1 * inch, height - 1 * inch, f"Day {day}")
 
-        # Draw text
-        c.setFont("Courier", 12)
-        with open(txt_path) as f:
-            lines = f.readlines()
+        # --- Table Image ---
+        with Image.open(table_path) as img:
+            table_width, table_height = img.size
 
-        text_obj = c.beginText(1 * inch, height - 1.5 * inch)
-        for line in lines:
-            text_obj.textLine(line.strip())
-        c.drawText(text_obj)
+        scale_factor = 0.4
+        table_width_pt = table_width * 0.75 * scale_factor
+        table_height_pt = table_height * 0.75 * scale_factor
 
-        # Use PIL to get image size and apply scaling
+        table_x = (width - table_width_pt) / 2
+        table_y = height - 1.5 * inch - table_height_pt
+
+        c.drawImage(
+            str(table_path),
+            table_x,
+            table_y,
+            width=table_width_pt,
+            height=table_height_pt,
+            preserveAspectRatio=True,
+            mask="auto",
+        )
+
+        # --- Map Image ---
         with Image.open(img_path) as img:
             img_width, img_height = img.size
 
-        # Convert to points (1 pixel = 0.75 points)
-        img_width_pt = img_width * 0.75
-        img_height_pt = img_height * 0.75
+        map_width_pt = img_width * 0.75 * scale_factor
+        map_height_pt = img_height * 0.75 * scale_factor
 
-        scale_factor = 0.4
-        scaled_width = img_width_pt * scale_factor
-        scaled_height = img_height_pt * scale_factor
-
-        # Position image below text
-        text_block_height = len(lines) * 14  # approx line height in points
-        image_y_position = height - 1.5 * inch - text_block_height - scaled_height - 0.5 * inch
-        image_y_position = max(image_y_position, 1 * inch)  # avoid running off page
-
-        x_pos = (width - scaled_width) / 2
+        map_x = (width - map_width_pt) / 2
+        map_y = table_y - map_height_pt - 0.5 * inch
+        map_y = max(map_y, 1 * inch)  # Ensure it stays on page
 
         c.drawImage(
             str(img_path),
-            x_pos,
-            image_y_position,
-            width=scaled_width,
-            height=scaled_height,
+            map_x,
+            map_y,
+            width=map_width_pt,
+            height=map_height_pt,
             preserveAspectRatio=True,
             mask="auto",
         )
 
         c.showPage()
+
     c.save()
 
     for day in range(model_inputs.no_of_days):
-        os.remove(folder_path / f"route_day_{day}.txt")
+        os.remove(folder_path / f"schedule_image_day_{day}.jpg")
         os.remove(folder_path / f"route_day_{day}.png")
 
 
@@ -205,7 +240,8 @@ def generate_schedules(model_inputs: ModelInputs, solution: dict[int, list[str]]
                 "end_time": current_time.strftime("%H:%M"),
             }
         )
-        pd.DataFrame(timeline).to_excel(folder_path / f"schedule_day_{day}.xlsx")
+        pd.DataFrame(timeline).to_excel(folder_path / f"schedule_day_{day}.xlsx", index=False)
+        excel_to_image(folder_path / f"schedule_day_{day}.xlsx", folder_path / f"schedule_image_day_{day}.jpg")
 
 
 def visualize_output(model_inputs: ModelInputs, solution: dict[int, list[str]], current_run: str) -> None:
