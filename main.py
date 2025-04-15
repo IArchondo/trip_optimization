@@ -13,9 +13,9 @@ from sched_opt.data_processing.data_processor import DataProcessor
 from sched_opt.distance_calculation.distance_matrix_calculator import (
     DistanceMatrixCalculator,
 )
-from sched_opt.g0_utils.utils import load_problem_definition
 from sched_opt.schedule_optimization.gurobi_optimizer import run_new_solver
 from sched_opt.schedule_visualization.new_schedule_visualizer import visualize_output
+from sched_opt.utils.utils import load_problem_definition
 
 logging.basicConfig(level=logging.INFO)
 

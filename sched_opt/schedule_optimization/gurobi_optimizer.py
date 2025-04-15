@@ -12,7 +12,6 @@ from gurobipy import GRB  # type: ignore
 
 from sched_opt.distance_calculation.distance_matrix_calculator import LocalizationData
 from sched_opt.elements import Activity, Coordinates, ModelInputs, Trip
-from sched_opt.g0_utils.utils import ProblemDefinition, order_route_from_start, transform_route_to_list_of_destinations
 from sched_opt.schedule_optimization.flexible_solver import (
     BaseSolver,
     GurobiSolver,
@@ -23,6 +22,7 @@ from sched_opt.schedule_optimization.flexible_solver import (
     SolverStatus,
     get_solution_value,
 )
+from sched_opt.utils.utils import ProblemDefinition, order_route_from_start, transform_route_to_list_of_destinations
 
 logger = logging.getLogger("Hola")
 
