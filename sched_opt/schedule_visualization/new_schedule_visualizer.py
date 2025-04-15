@@ -42,9 +42,7 @@ def excel_to_image(excel_path: Path, img_output_path: Path) -> None:
     table.auto_set_font_size(False)
     table.set_fontsize(font_size)
 
-    # Optional: set column widths or bold headers
     for (row, _), cell in table.get_celld().items():
-        # cell.set_pad(0.2)
         if row == 0:
             cell.set_fontsize(font_size + 1)
             cell.set_text_props(weight="bold")
@@ -131,9 +129,6 @@ def generate_day_route_output(
     plt.axis("off")
     plt.savefig(f"02_reports/{current_run}/route_day_{day_to_plot}.png", bbox_inches="tight")
     plt.close()
-
-    # with open(f"02_reports/{current_run}/route_day_{day_to_plot}.txt", "w") as text_file:
-    #     text_file.write("\n".join(destination_list))
 
 
 def generate_trip_report_pdf(model_inputs: ModelInputs, current_run: str) -> None:
