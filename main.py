@@ -57,15 +57,3 @@ if __name__ == "__main__":
     os.makedirs(f"02_reports/{current_run}")
 
     visualize_output(model_inputs, solution_dict, current_run)
-
-    # copy_file(
-    #     "03_notebook_templates/trip_report_template.ipynb",
-    #     f"02_reports/{current_run}/trip_report_{current_run}.ipynb",
-    # )
-
-    # os.system(
-    #     "jupyter nbconvert --execute --no-input --no-prompt --to html "
-    #     + f"02_reports/{current_run}/trip_report_{current_run}.ipynb"
-    # )
-
-    # os.remove(f"02_reports/{current_run}/trip_report_{current_run}.ipynb")

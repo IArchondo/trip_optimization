@@ -1,6 +1,7 @@
 """Define new visualizer."""
 
 import logging
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -162,6 +163,10 @@ def generate_trip_report_pdf(model_inputs: ModelInputs, current_run: str) -> Non
         c.showPage()
     c.save()
 
+    for day in range(model_inputs.no_of_days):
+        os.remove(folder_path / f"route_day_{day}.txt")
+        os.remove(folder_path / f"route_day_{day}.png")
+
 
 def generate_schedules(model_inputs: ModelInputs, solution: dict[int, list[str]], current_run: str) -> None:
     """Generate schedules for each day."""
@@ -175,16 +180,31 @@ def generate_schedules(model_inputs: ModelInputs, solution: dict[int, list[str]]
         timeline = []
 
         for origin, destination in trips:
+            end_time = current_time + timedelta(minutes=model_inputs.activities[origin].activity_duration)
             timeline.append(
                 {
                     "activity": origin,
-                    "time": current_time.strftime("%H:%M"),
+                    "start_time": current_time.strftime("%H:%M"),
+                    "end_time": end_time.strftime("%H:%M"),
                 }
             )
-            current_time += timedelta(minutes=model_inputs.activities[origin].activity_duration)
-            timeline.append({"activity": "travel", "time": current_time.strftime("%H:%M")})
-            current_time += timedelta(minutes=model_inputs.trips[(origin, destination)].duration)
-        timeline.append({"activity": model_inputs.hotel, "time": current_time.strftime("%H:%M")})
+            current_time = end_time
+            end_time = current_time + timedelta(minutes=model_inputs.trips[(origin, destination)].duration)
+            timeline.append(
+                {
+                    "activity": "travel",
+                    "start_time": current_time.strftime("%H:%M"),
+                    "end_time": end_time.strftime("%H:%M"),
+                }
+            )
+            current_time = end_time
+        timeline.append(
+            {
+                "activity": model_inputs.hotel,
+                "start_time": current_time.strftime("%H:%M"),
+                "end_time": current_time.strftime("%H:%M"),
+            }
+        )
         pd.DataFrame(timeline).to_excel(folder_path / f"schedule_day_{day}.xlsx")
 
 
