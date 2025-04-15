@@ -20,6 +20,7 @@ class ProblemDefinition:
     total_hours_in_day: int
     solve_time_in_minutes: int
     use_gurobi: bool
+    reduce_no_of_possible_trips: float
 
 
 def load_standard_date() -> datetime:
@@ -52,6 +53,7 @@ def load_problem_definition() -> ProblemDefinition:
     total_hours_in_day = problem_definition_config["total_hours_in_day"]
     solve_time_in_minutes = problem_definition_config["solve_time_in_minutes"]
     use_gurobi = problem_definition_config["use_gurobi"]
+    reduce_no_of_possible_trips = problem_definition_config["reduce_no_of_possible_trips"]
 
     return ProblemDefinition(
         num_days=num_days,
@@ -59,6 +61,7 @@ def load_problem_definition() -> ProblemDefinition:
         total_hours_in_day=total_hours_in_day,
         solve_time_in_minutes=solve_time_in_minutes,
         use_gurobi=use_gurobi,
+        reduce_no_of_possible_trips=reduce_no_of_possible_trips,
     )
 
 

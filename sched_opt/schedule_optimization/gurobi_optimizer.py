@@ -58,6 +58,34 @@ def get_coordinates(loc: LocalizationData, place: str) -> Coordinates:
     return Coordinates(lng=location["lng"], lat=location["lat"])
 
 
+def reduce_no_of_possible_trips(
+    trips: dict[tuple[str, str], Trip], problem_definition: ProblemDefinition, hotel: str
+) -> dict[tuple[str, str], Trip]:
+    """Remove the longest x% of trips for each destination, except the hotel destination which is always kept."""
+    trips_by_dest: dict[str, list[tuple[tuple[str, str], Trip]]] = defaultdict(list)
+
+    for (origin, dest), trip in trips.items():
+        # Always keep trips TO the hotel
+        if dest == hotel or origin == hotel:
+            continue
+        trips_by_dest[dest].append(((origin, dest), trip))
+
+    pruned_trips: dict[tuple[str, str], Trip] = {}
+
+    for _, trip_list in trips_by_dest.items():
+        trip_list.sort(key=lambda x: x[1].duration)
+        keep_count = int(len(trip_list) * (1 - problem_definition.reduce_no_of_possible_trips))
+        for trip_key, trip_obj in trip_list[:keep_count]:
+            pruned_trips[trip_key] = trip_obj
+
+    # Add back all trips that have the hotel as destination
+    for (origin, dest), trip in trips.items():
+        if dest == hotel or origin == hotel:
+            pruned_trips[(origin, dest)] = trip
+
+    return pruned_trips
+
+
 def create_model_inputs(loc: LocalizationData, problem_definition: ProblemDefinition) -> ModelInputs:
     """Preprocess inputs for model."""
     activities = {
@@ -76,8 +104,10 @@ def create_model_inputs(loc: LocalizationData, problem_definition: ProblemDefini
         if origin != destination
     }
     hotel = loc.places[problem_definition.hotel_index]
+    if problem_definition.reduce_no_of_possible_trips:
+        trips = reduce_no_of_possible_trips(trips, problem_definition, hotel)
     # add stay home
-    trips[(hotel, hotel)] = Trip(origin=hotel, destination=hotel, duration=1, duration_incl_activity_length=1)
+    trips[(hotel, hotel)] = Trip(origin=hotel, destination=hotel, duration=0, duration_incl_activity_length=0)
     return ModelInputs(
         activities,
         trips,
@@ -194,7 +224,12 @@ def no_subroutes(model_inputs: ModelInputs, variables: Variables) -> Iterable[Na
     for day in range(model_inputs.no_of_days):
         for i in model_inputs.activities:
             for j in model_inputs.activities:
-                if i == j or i == model_inputs.hotel or j == model_inputs.hotel:
+                if (
+                    i == j
+                    or i == model_inputs.hotel
+                    or j == model_inputs.hotel
+                    or (i, j) not in variables.assignments[day]
+                ):
                     continue
                 yield NamedConstraint(
                     name=f"subtour_elim[{day}][{i}][{j}]",

@@ -9,8 +9,9 @@ problem_definition:
     num_days: 6
     hotel_index: 0
     total_hours_in_day: 12
-    solve_time_in_minutes: 1
-    use_gurobi: True
+    solve_time_in_minutes: 40
+    use_gurobi: False
+    reduce_no_of_possible_trips: 0.4
 
 execution_pipeline:
     fetch_distances: False

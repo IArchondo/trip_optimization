@@ -38,12 +38,12 @@ if __name__ == "__main__":
 
         distances = dmc.execute_pipeline()
 
-        with open(Path("00_saved_data/saved_distances") / "big_problem.pickle", "wb") as handle:
+        with open(Path("00_saved_data/saved_distances") / "nyc_trip.pickle", "wb") as handle:
             pickle.dump(distances, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     else:
         LOGGER.info("Loading saved distances")
-        with open(Path("00_saved_data/saved_distances") / "big_problem.pickle", "rb") as handle:
+        with open(Path("00_saved_data/saved_distances") / "nyc_trip.pickle", "rb") as handle:
             distances = pickle.load(handle)
 
     data_processor = DataProcessor()
